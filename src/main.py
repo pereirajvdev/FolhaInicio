@@ -24,6 +24,8 @@ TITULO_JANELA_LOGIN = (
     "03 - Recursos Humanos e Folha de Pagamento ( Login )"
 )
 
+TITULO_JANELA_INTERMEDIARIA = "Folha Atual de Trabalho"
+
 TITULO_JANELA_AVISO = "E&L - Aviso"
 
 TITULO_JANELA_PRINCIPAL = (
@@ -62,46 +64,8 @@ def ler_credenciais():
     return usuario, senha
 
 
-def localizar_janela_login():
-    """
-    Aguarda até identificar a janela de login pelo título.
-    Retorna o objeto da janela quando encontrado.
-    """
-
-    print(
-        f"[INFO] Aguardando a janela: {TITULO_JANELA_LOGIN}"
-    )
-
-    inicio = time.monotonic()
-
-    while time.monotonic() - inicio < TEMPO_LIMITE:
-        try:
-            janelas = Desktop(backend="win32").windows()
-
-            for janela in janelas:
-                try:
-                    titulo = janela.window_text().strip()
-
-                    if titulo == TITULO_JANELA_LOGIN:
-                        print(f"[OK] Janela identificada: {titulo}")
-                        return janela
-
-                except Exception:
-                    continue
-
-        except Exception as erro:
-            print(f"[AVISO] Erro ao listar janelas: {erro}")
-
-        time.sleep(INTERVALO_VERIFICACAO)
-
-    raise TimeoutError(
-        f"A janela '{TITULO_JANELA_LOGIN}' não foi encontrada "
-        f"em {TEMPO_LIMITE} segundos."
-    )
-
-
 def preencher_login(janela, usuario, senha):
-    """Ativa a janela identificada e preenche as credenciais."""
+    """Preenche as credenciais e confirma a tela intermediária."""
 
     try:
         janela.set_focus()
@@ -119,14 +83,20 @@ def preencher_login(janela, usuario, senha):
     print("[INFO] Preenchendo a senha...")
     pyautogui.write(senha, interval=0.05)
     pyautogui.press("enter")
-    time.sleep(0.1)
-    input("Verificar tela...")
-    pyautogui.press("enter")
+
     print("[OK] Credenciais enviadas ao sistema.")
+
+    janela = aguardar_janela(TITULO_JANELA_INTERMEDIARIA)
+
+    janela.set_focus()
+    time.sleep(0.3)
+    pyautogui.press("enter")
+
+    print("[OK] Tela intermediária confirmada.")
 
 
 def abrir_folha():
-    """Abre a folha e só preenche após localizar a janela de login."""
+    """Fecha a instância anterior, abre a folha e realiza o login."""
 
     if not ARQUIVO_BAT.is_file():
         raise FileNotFoundError(
@@ -136,7 +106,7 @@ def abrir_folha():
     usuario, senha = ler_credenciais()
 
     fechar_folha_aberta()
-    
+
     print("[INFO] Abrindo o sistema da folha...")
 
     subprocess.Popen(
@@ -144,59 +114,40 @@ def abrir_folha():
         cwd=str(DIRETORIO_PROJETO),
     )
 
-    janela = localizar_janela_login()
+    janela = aguardar_janela(TITULO_JANELA_LOGIN)
 
     preencher_login(janela, usuario, senha)
 
+    janela_aviso = aguardar_janela(TITULO_JANELA_AVISO)
+
+    janela_aviso.set_focus()
+    time.sleep(0.3)
+    pyautogui.press("enter")
+
+    print("[OK] Aviso confirmado.")
+
+    time.sleep(1)
     posicionar_janela_inferior_esquerda()
+   
 
-    
-    input("Verificar tela...")
-    localizar_janela_aviso()
-
-    posicionar_janela_inferior_esquerda()
-
-    
-
-def localizar_janela_aviso():
+def localizar_janela(titulo_esperado):
     """
-    Aguarda até identificar a janela E&L - Aviso.
-    Quando encontrada, ativa a janela e pressiona Enter.
+    Localiza uma janela pelo título ou por um trecho dele.
+    Retorna o objeto da janela ou None se não encontrar.
     """
 
-    print(f"[INFO] Aguardando a janela: {TITULO_JANELA_AVISO}")
-
-    inicio = time.monotonic()
-
-    while time.monotonic() - inicio < TEMPO_LIMITE:
+    for janela in Desktop(backend="win32").windows():
         try:
-            for janela in Desktop(backend="win32").windows():
-                try:
-                    titulo = janela.window_text().strip()
+            titulo = janela.window_text().strip()
 
-                    if titulo == TITULO_JANELA_AVISO:
-                        print(f"[OK] Janela identificada: {titulo}")
+            if titulo_esperado.lower() in titulo.lower():
+                print(f"[OK] Janela identificada: {titulo}")
+                return janela
 
-                        janela.set_focus()
-                        time.sleep(0.3)
+        except Exception:
+            continue
 
-                        pyautogui.press("enter")
-
-                        print("[OK] Enter enviado para a janela de aviso.")
-                        return
-
-                except Exception:
-                    continue
-
-        except Exception as erro:
-            print(f"[AVISO] Erro ao listar janelas: {erro}")
-
-        time.sleep(INTERVALO_VERIFICACAO)
-
-    print(
-        f"A janela '{TITULO_JANELA_AVISO}' não foi encontrada "
-        f"em {TEMPO_LIMITE} segundos."
-    )
+    return None
 
 
 def fechar_folha_aberta():
@@ -204,7 +155,7 @@ def fechar_folha_aberta():
 
     print("[INFO] Verificando se a folha já está aberta...")
 
-    janela = localizar_janela_principal()
+    janela = localizar_janela(TITULO_JANELA_PRINCIPAL)
 
     if janela is None:
         print("[INFO] Nenhuma instância anterior encontrada.")
@@ -246,7 +197,7 @@ def posicionar_janela_inferior_esquerda():
     """Redimensiona a janela para metade do monitor e a posiciona
     no canto inferior esquerdo, respeitando o padding."""
 
-    janela = localizar_janela_principal()
+    janela = localizar_janela(TITULO_JANELA_PRINCIPAL)
 
     if janela is None:
         print("[AVISO] Janela principal da folha não encontrada.")
@@ -285,21 +236,25 @@ def posicionar_janela_inferior_esquerda():
         ) from erro
 
 
+def aguardar_janela(titulo_esperado):
+    """Aguarda até a janela aparecer ou atingir o tempo limite."""
 
-def localizar_janela_principal():
-    """Localiza a janela principal da folha pelo título configurado."""
+    print(f"[INFO] Aguardando a janela: {titulo_esperado}")
 
-    for janela in Desktop(backend="win32").windows():
-        try:
-            titulo = janela.window_text().strip()
+    inicio = time.monotonic()
 
-            if TITULO_JANELA_PRINCIPAL.lower() in titulo.lower():
-                return janela
+    while time.monotonic() - inicio < TEMPO_LIMITE:
+        janela = localizar_janela(titulo_esperado)
 
-        except Exception:
-            continue
+        if janela is not None:
+            return janela
 
-    return None
+        time.sleep(INTERVALO_VERIFICACAO)
+
+    raise TimeoutError(
+        f"A janela '{titulo_esperado}' não apareceu "
+        f"em {TEMPO_LIMITE} segundos."
+    )
 
 
 def main():
