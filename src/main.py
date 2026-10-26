@@ -115,17 +115,14 @@ def abrir_folha():
 
     preencher_login(janela, usuario, senha)
 
+    posicionar_janela_inferior_esquerda()
+
     janela_aviso = aguardar_janela(TITULO_JANELA_AVISO)
 
     janela_aviso.set_focus()
     pyautogui.press("enter")
-
-    posicionar_janela_inferior_esquerda()
-    input("Verificar... ")
     print("[OK] Aviso confirmado.")
-
-    posicionar_janela_inferior_esquerda()
-   
+       
 
 def localizar_janela(titulo_esperado):
     """
