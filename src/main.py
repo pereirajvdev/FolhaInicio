@@ -74,14 +74,12 @@ def preencher_login(janela, usuario, senha):
             f"Não foi possível ativar a janela de login: {erro}"
         ) from erro
 
-    time.sleep(0.5)
-
     print("[INFO] Preenchendo o usuário...")
-    pyautogui.write(usuario, interval=0.05)
+    pyautogui.write(usuario, interval=0.01)
     pyautogui.press("tab")
 
     print("[INFO] Preenchendo a senha...")
-    pyautogui.write(senha, interval=0.05)
+    pyautogui.write(senha, interval=0.01)
     pyautogui.press("enter")
 
     print("[OK] Credenciais enviadas ao sistema.")
@@ -89,7 +87,6 @@ def preencher_login(janela, usuario, senha):
     janela = aguardar_janela(TITULO_JANELA_INTERMEDIARIA)
 
     janela.set_focus()
-    time.sleep(0.3)
     pyautogui.press("enter")
 
     print("[OK] Tela intermediária confirmada.")
@@ -121,12 +118,12 @@ def abrir_folha():
     janela_aviso = aguardar_janela(TITULO_JANELA_AVISO)
 
     janela_aviso.set_focus()
-    time.sleep(0.3)
     pyautogui.press("enter")
 
+    posicionar_janela_inferior_esquerda()
+    input("Verificar... ")
     print("[OK] Aviso confirmado.")
 
-    time.sleep(1)
     posicionar_janela_inferior_esquerda()
    
 
@@ -173,10 +170,10 @@ def fechar_folha_aberta():
         processo.terminate()
 
         try:
-            processo.wait(timeout=3)
+            processo.wait(timeout=1)
         except psutil.TimeoutExpired:
             processo.kill()
-            processo.wait(timeout=3)
+            processo.wait(timeout=1)
 
         print("[OK] Instância anterior encerrada.")
 
@@ -188,9 +185,6 @@ def fechar_folha_aberta():
             "Acesso negado ao processo da folha. "
             "Verifique as permissões do Windows."
         )
-
-    time.sleep(1)
-
 
 
 def posicionar_janela_inferior_esquerda():
@@ -205,7 +199,6 @@ def posicionar_janela_inferior_esquerda():
 
     try:
         janela.restore()
-        time.sleep(0.3)
 
         largura_tela, altura_tela = pyautogui.size()
 
