@@ -3,6 +3,7 @@ import subprocess
 import time
 from pathlib import Path
 
+import psutil
 import pyautogui
 from pywinauto import Desktop
 
@@ -24,6 +25,11 @@ TITULO_JANELA_LOGIN = (
 )
 
 TITULO_JANELA_AVISO = "E&L - Aviso"
+
+TITULO_JANELA_PRINCIPAL = (
+    "Recursos Humanos e Folha de Pagamento "
+    "[ Versão 3.02 - 17/06/2026 ]"
+)
 
 TEMPO_LIMITE = 60
 INTERVALO_VERIFICACAO = 1
@@ -128,6 +134,9 @@ def abrir_folha():
 
     usuario, senha = ler_credenciais()
 
+    fechar_folha_aberta()
+
+    input("Foi? ")
     print("[INFO] Abrindo o sistema da folha...")
 
     subprocess.Popen(
@@ -139,8 +148,11 @@ def abrir_folha():
 
     preencher_login(janela, usuario, senha)
 
+    posicionar_janela_inferior_esquerda()
+
     localizar_janela_aviso()
 
+    
 
 def localizar_janela_aviso():
     """
@@ -177,10 +189,109 @@ def localizar_janela_aviso():
 
         time.sleep(INTERVALO_VERIFICACAO)
 
-    raise TimeoutError(
+    print(
         f"A janela '{TITULO_JANELA_AVISO}' não foi encontrada "
         f"em {TEMPO_LIMITE} segundos."
     )
+
+
+def fechar_folha_aberta():
+    """Encerra o processo associado à janela principal, se estiver aberto."""
+
+    print("[INFO] Verificando se a folha já está aberta...")
+
+    janela = localizar_janela_principal()
+
+    if janela is None:
+        print("[INFO] Nenhuma instância anterior encontrada.")
+        return
+
+    try:
+        pid = janela.process_id()
+        processo = psutil.Process(pid)
+
+        print(
+            f"[INFO] Encerrando {processo.name()} "
+            f"(PID {pid})..."
+        )
+
+        processo.terminate()
+
+        try:
+            processo.wait(timeout=3)
+        except psutil.TimeoutExpired:
+            processo.kill()
+            processo.wait(timeout=3)
+
+        print("[OK] Instância anterior encerrada.")
+
+    except psutil.NoSuchProcess:
+        print("[INFO] O processo já foi encerrado.")
+
+    except psutil.AccessDenied:
+        raise RuntimeError(
+            "Acesso negado ao processo da folha. "
+            "Verifique as permissões do Windows."
+        )
+
+    time.sleep(1)
+
+
+def posicionar_janela_inferior_esquerda():
+    """Redimensiona a janela para metade do monitor e a posiciona
+    no canto inferior esquerdo."""
+
+    janela = localizar_janela_principal()
+
+    if janela is None:
+        print("[AVISO] Janela principal da folha não encontrada.")
+        return
+
+    try:
+        janela.restore()
+        time.sleep(0.3)
+
+        largura_tela, altura_tela = pyautogui.size()
+
+        largura_janela = largura_tela // 2
+        altura_janela = altura_tela // 2
+
+        x = 0
+        y = altura_tela - altura_janela
+
+        janela.move_window(
+            x=x,
+            y=y,
+            width=largura_janela,
+            height=altura_janela,
+            repaint=True,
+        )
+
+        print(
+            "[OK] Janela redimensionada para metade do monitor "
+            "e posicionada no canto inferior esquerdo."
+        )
+
+    except Exception as erro:
+        raise RuntimeError(
+            f"Não foi possível reposicionar a janela: {erro}"
+        ) from erro
+
+
+def localizar_janela_principal():
+    """Localiza a janela principal da folha pelo título configurado."""
+
+    for janela in Desktop(backend="win32").windows():
+        try:
+            titulo = janela.window_text().strip()
+
+            if TITULO_JANELA_PRINCIPAL.lower() in titulo.lower():
+                return janela
+
+        except Exception:
+            continue
+
+    return None
 
 
 def main():
