@@ -23,6 +23,8 @@ TITULO_JANELA_LOGIN = (
     "03 - Recursos Humanos e Folha de Pagamento ( Login )"
 )
 
+TITULO_JANELA_AVISO = "E&L - Aviso"
+
 TEMPO_LIMITE = 60
 INTERVALO_VERIFICACAO = 1
 
@@ -111,7 +113,8 @@ def preencher_login(janela, usuario, senha):
     print("[INFO] Preenchendo a senha...")
     pyautogui.write(senha, interval=0.05)
     pyautogui.press("enter")
-
+    time.sleep(0.1)
+    pyautogui.press("enter")
     print("[OK] Credenciais enviadas ao sistema.")
 
 
@@ -135,6 +138,49 @@ def abrir_folha():
     janela = localizar_janela_login()
 
     preencher_login(janela, usuario, senha)
+
+    localizar_janela_aviso()
+
+
+def localizar_janela_aviso():
+    """
+    Aguarda até identificar a janela E&L - Aviso.
+    Quando encontrada, ativa a janela e pressiona Enter.
+    """
+
+    print(f"[INFO] Aguardando a janela: {TITULO_JANELA_AVISO}")
+
+    inicio = time.monotonic()
+
+    while time.monotonic() - inicio < TEMPO_LIMITE:
+        try:
+            for janela in Desktop(backend="win32").windows():
+                try:
+                    titulo = janela.window_text().strip()
+
+                    if titulo == TITULO_JANELA_AVISO:
+                        print(f"[OK] Janela identificada: {titulo}")
+
+                        janela.set_focus()
+                        time.sleep(0.3)
+
+                        pyautogui.press("enter")
+
+                        print("[OK] Enter enviado para a janela de aviso.")
+                        return
+
+                except Exception:
+                    continue
+
+        except Exception as erro:
+            print(f"[AVISO] Erro ao listar janelas: {erro}")
+
+        time.sleep(INTERVALO_VERIFICACAO)
+
+    raise TimeoutError(
+        f"A janela '{TITULO_JANELA_AVISO}' não foi encontrada "
+        f"em {TEMPO_LIMITE} segundos."
+    )
 
 
 def main():
