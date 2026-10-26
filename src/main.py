@@ -120,6 +120,7 @@ def preencher_login(janela, usuario, senha):
     pyautogui.write(senha, interval=0.05)
     pyautogui.press("enter")
     time.sleep(0.1)
+    input("Verificar tela...")
     pyautogui.press("enter")
     print("[OK] Credenciais enviadas ao sistema.")
 
@@ -135,8 +136,7 @@ def abrir_folha():
     usuario, senha = ler_credenciais()
 
     fechar_folha_aberta()
-
-    input("Foi? ")
+    
     print("[INFO] Abrindo o sistema da folha...")
 
     subprocess.Popen(
@@ -150,7 +150,11 @@ def abrir_folha():
 
     posicionar_janela_inferior_esquerda()
 
+    
+    input("Verificar tela...")
     localizar_janela_aviso()
+
+    posicionar_janela_inferior_esquerda()
 
     
 
@@ -237,9 +241,10 @@ def fechar_folha_aberta():
     time.sleep(1)
 
 
+
 def posicionar_janela_inferior_esquerda():
     """Redimensiona a janela para metade do monitor e a posiciona
-    no canto inferior esquerdo."""
+    no canto inferior esquerdo, respeitando o padding."""
 
     janela = localizar_janela_principal()
 
@@ -256,14 +261,16 @@ def posicionar_janela_inferior_esquerda():
         largura_janela = largura_tela // 2
         altura_janela = altura_tela // 2
 
-        x = 0
-        y = altura_tela - altura_janela
+        padding = 12
+
+        x = padding
+        y = (altura_tela - altura_janela) // 2 + padding
 
         janela.move_window(
-            x=x,
-            y=y,
-            width=largura_janela,
-            height=altura_janela,
+            x=int(x),
+            y=int(y),
+            width=int(largura_janela - padding * 2),
+            height=int(altura_janela - padding * 2),
             repaint=True,
         )
 
@@ -276,6 +283,7 @@ def posicionar_janela_inferior_esquerda():
         raise RuntimeError(
             f"Não foi possível reposicionar a janela: {erro}"
         ) from erro
+
 
 
 def localizar_janela_principal():
